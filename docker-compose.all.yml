@@ -1,0 +1,58 @@
+# LangGraph 项目的全部后端依赖：PostgreSQL（对话持久化）+ Milvus（知识库向量检索）
+#
+# 用法（在本文件所在目录执行）：
+#   启动:  docker compose -f docker-compose.all.yml up -d
+#   停止:  docker compose -f docker-compose.all.yml down
+#   状态:  docker compose -f docker-compose.all.yml ps
+#
+# 注意：首次运行前请先确认 D:/Milvus/volumes/milvus 存在（那是已有的知识库数据）
+
+services:
+  # ---------- 1. PostgreSQL：LangGraph 对话 checkpoint 持久化 ----------
+  postgres:
+    image: postgres:16
+    container_name: langgraph-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: langgraph_user
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: langgraph_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langgraph_user -d langgraph_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------- 2. Milvus Standalone：Apple 知识库向量库 ----------
+  # 数据目录沿用已有的 D:\Milvus\volumes\milvus（里面是灌好的 Appledocs 集合）
+  milvus:
+    image: milvusdb/milvus:v3.0.0
+    container_name: milvus-standalone
+    restart: unless-stopped
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      ETCD_USE_EMBED: "true"
+      ETCD_DATA_DIR: /var/lib/milvus/etcd
+      ETCD_CONFIG_PATH: /milvus/configs/embedEtcd.yaml
+      COMMON_STORAGETYPE: local
+      DEPLOY_MODE: STANDALONE
+    volumes:
+      - D:/Milvus/volumes/milvus:/var/lib/milvus
+      - D:/Milvus/embedEtcd.yaml:/milvus/configs/embedEtcd.yaml
+      - D:/Milvus/user.yaml:/milvus/configs/user.yaml
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+      - "2379:2379"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3

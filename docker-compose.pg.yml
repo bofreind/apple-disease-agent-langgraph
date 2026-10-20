@@ -1,0 +1,22 @@
+version: "3.5"
+
+# LangGraph 对话状态持久化用的 PostgreSQL
+# 启动:  docker compose -f docker-compose.pg.yml up -d
+# 连接串与 config.py 的 DB_URL 保持一致
+services:
+  postgres:
+    image: postgres:16
+    container_name: langgraph-postgres
+    environment:
+      POSTGRES_USER: langgraph_user
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: langgraph_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langgraph_user -d langgraph_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

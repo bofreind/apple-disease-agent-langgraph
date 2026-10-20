@@ -1,0 +1,58 @@
+# langgraphApple 依赖清单
+#
+# 版本已与实测可用的 conda 环境 D:/anaconda/envs/langchain1-2study 完全对齐，
+# 该环境已全部就绪，直接使用即可：
+#   D:/anaconda/envs/langchain1-2study/python.exe -m pip install -r requirements.txt
+#
+# 若要在全新 Python(>=3.11,<3.14) 环境中重建：
+#   python -m pip install -r requirements.txt
+#
+# torch 走 CUDA 版（本机 RTX 3050）。+cu124 的 wheel 不在 PyPI 上，
+# 必须额外索引才能解析，因此加在下面一行；CPU-only 机器请先删掉它，
+# 并把 torch/torchvision 换成不带 +cu124 的同版本号。
+
+--extra-index-url https://download.pytorch.org/whl/cu124
+
+# ---------- LangGraph 对话编排 + PostgreSQL 持久化 ----------
+langgraph==1.1.2
+langgraph-checkpoint==4.0.1
+langgraph-checkpoint-postgres==3.0.5
+langgraph-prebuilt==1.0.8
+langgraph-sdk==0.3.9
+psycopg[binary,pool]==3.3.3
+
+# ---------- LangChain ----------
+langchain==1.2.12
+langchain-core==1.2.18
+langchain-community==0.4.1
+langchain-openai==1.1.11
+langchain-text-splitters==1.1.1
+
+# ---------- RAG 知识库（复用 apple_agent.ipynb 方案） ----------
+pymilvus==2.6.12
+dashscope==1.25.6
+
+# ---------- 复用 Apple/ 的模型推理（GPU 版） ----------
+# services.py 里是 torch.device("cuda" if torch.cuda.is_available() else "cpu")，
+# 装 CUDA 版即自动启用 GPU。实测（RTX 3050 Laptop，5312x2988 大图）：
+#   分类 ResNet50  0.50s → 0.17s
+#   分割 U-Net     1.90s → 0.31s
+#   模型冷加载     7.5s  → 2.9s
+# 注意：用 `pip install -r requirements.txt` 正常安装即可，不要加 --force-reinstall
+# （它会把 numpy/setuptools 一起重装，并把 numpy 顶到 2.5.x 而弄坏 numba）。
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+
+# ---------- 服务与基础库 ----------
+fastapi==0.135.1
+uvicorn==0.46.0
+pydantic==2.12.5
+python-dotenv==1.2.1
+pillow==12.3.0
+opencv-python==4.13.0.92
+
+# 必须钉在 2.4.x：torch/torchvision/scipy/cv2 都兼容 2.4，
+# 但 numba 0.66.0 要求 numpy<2.5，升到 2.5.x 会让 numba（及依赖它的
+# unstructured 文档加载器）直接 import 失败。本项目不用 numba，
+# 但保持 2.4.4 可让整个环境零冲突。
+numpy==2.4.4
